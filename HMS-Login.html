@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hospital Management System - Patient Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #cce7ff, #99ccff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 350px;
+      text-align: center;
+    }
+    h1 {
+      color: #004080;
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #0066cc;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #004080;
+    }
+    .toggle {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .toggle span {
+      color: #0066cc;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="form-title">Patient Login</h1>
+    <form id="login-form">
+      <input type="email" placeholder="Email" required>
+      <input type="password" placeholder="Password" required>
+      <button type="submit">Login</button>
+    </form>
+
+    <form id="signup-form" class="hidden">
+      <input type="text" placeholder="Full Name" required>
+      <input type="email" placeholder="Email" required>
+      <input type="password" placeholder="Password" required>
+      <input type="text" placeholder="Phone Number" required>
+      <button type="submit">Sign Up</button>
+    </form>
+
+    <div class="toggle">
+      <span id="toggle-text">New patient? Sign Up</span>
+    </div>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById("login-form");
+    const signupForm = document.getElementById("signup-form");
+    const toggleText = document.getElementById("toggle-text");
+    const formTitle = document.getElementById("form-title");
+
+    toggleText.addEventListener("click", () => {
+      loginForm.classList.toggle("hidden");
+      signupForm.classList.toggle("hidden");
+
+      if (loginForm.classList.contains("hidden")) {
+        formTitle.innerText = "Patient Sign Up";
+        toggleText.innerText = "Already have an account? Login";
+      } else {
+        formTitle.innerText = "Patient Login";
+        toggleText.innerText = "New patient? Sign Up";
+      }
+    });
+  </script>
+</body>
+</html>
