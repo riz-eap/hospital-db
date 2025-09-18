@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MediCore HMS - Appointments</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Roboto',sans-serif;background:#121212;color:#fff;display:flex;height:100vh;overflow:hidden;}
+
+    /* Sidebar */
+    .sidebar{width:250px;background:#1f1f30;padding:20px;display:flex;flex-direction:column;}
+    .sidebar h2{color:#fff;text-align:center;margin-bottom:25px;}
+    .sidebar a{display:block;color:#ccc;padding:12px 15px;margin-bottom:8px;text-decoration:none;border-radius:6px;transition:0.3s;}
+    .sidebar a.active,.sidebar a:hover{background:#2e2e50;color:#fff;}
+    .sidebar button{margin-top:auto;padding:12px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;transition:0.3s;}
+    .sidebar button:hover{background:#c0392b;}
+
+    /* Main content */
+    .main{flex:1;padding:25px;overflow-y:auto;}
+    .main h2{margin-bottom:20px;color:#fff;}
+
+    /* Form */
+    form{margin-bottom:20px;background:#1e1e2f;padding:20px;border-radius:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+    form input, form select, form button{padding:10px;border:none;border-radius:6px;font-size:14px;}
+    form input, form select{flex:1;}
+    form button{background:#1abc9c;color:#121212;cursor:pointer;transition:0.3s;font-weight:500;}
+    form button:hover{background:#16a085;}
+
+    /* Table */
+    table{width:100%;border-collapse:collapse;margin-top:20px;border-radius:10px;overflow:hidden;background:#1f1f30;}
+    th, td{padding:12px 15px;text-align:center;border-bottom:1px solid #333;}
+    th{background:#2a2a40;color:#fff;font-weight:500;}
+    tr:nth-child(even){background:#23233f;}
+    tr:hover{background:#2e2e50;}
+    td[contenteditable="true"]{background:#2a2a40;cursor:text;}
+    
+    /* Action buttons */
+    button.action-btn{padding:6px 10px;border:none;border-radius:6px;margin:0 2px;cursor:pointer;transition:0.3s;}
+    button.save-btn{background:#1abc9c;color:#121212;}
+    button.save-btn:hover{background:#16a085;}
+    button.delete-btn{background:#e74c3c;color:#fff;}
+    button.delete-btn:hover{background:#c0392b;}
+
+    /* Highlight overdue appointments */
+    .overdue{color:#e74c3c;font-weight:700;}
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>MediCore HMS</h2>
+    <a href="/index.html">Dashboard</a>
+    <a href="/patients.html">Patients</a>
+    <a href="/staff.html">Staff</a>
+    <a href="/appointments.html" class="active">Appointments</a>
+    <a href="/medicines.html">Medicines</a>
+    <a href="/settings.html">Settings</a>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <h2>Appointments</h2>
+    <form id="add-appointment-form">
+      <input type="number" id="patient_id" placeholder="Patient ID" required>
+      <input type="number" id="doctor_id" placeholder="Doctor ID" required>
+      <input type="datetime-local" id="appointment_date" required>
+      <select id="status">
+        <option>Scheduled</option>
+        <option>Completed</option>
+        <option>Cancelled</option>
+      </select>
+      <button type="submit">Add Appointment</button>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Patient</th>
+          <th>Doctor</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="appointments-tbody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    // User session
+    const user = JSON.parse(localStorage.getItem('user'));
+    if(!user) window.location.href='/login.html';
+
+    function logout(){
+      fetch('/logout',{method:'POST'}).finally(()=>{
+        localStorage.removeItem('user');
+        window.location.href='/login.html';
+      });
+    }
+
+    // Load appointments
+    async function loadAppointments(){
+      try{
+        const data=await fetch('/appointments').then(r=>r.json());
+        const tbody=document.getElementById('appointments-tbody'); tbody.innerHTML='';
+        data.forEach(a=>{
+          const date = new Date(a.appointment_date);
+          const isOverdue = (date < new Date() && a.status === 'Scheduled') ? 'overdue' : '';
+          tbody.innerHTML+=`
+            <tr>
+              <td>${a.appointment_id}</td>
+              <td contenteditable="true" data-field="patient_id">${a.patient}</td>
+              <td contenteditable="true" data-field="doctor_id">${a.doctor}</td>
+              <td contenteditable="true" data-field="appointment_date" class="${isOverdue}">${a.appointment_date}</td>
+              <td contenteditable="true" data-field="status">${a.status}</td>
+              <td>
+                <button class="action-btn save-btn" onclick="updateAppointment(${a.appointment_id}, this)">Save</button>
+                <button class="action-btn delete-btn" onclick="deleteAppointment(${a.appointment_id})">Delete</button>
+              </td>
+            </tr>`;
+        });
+      } catch(err){
+        console.error('Error loading appointments', err);
+      }
+    }
+
+    // Update appointment
+    async function updateAppointment(id,btn){
+      const row=btn.closest('tr');
+      const body={
+        patient_id: row.querySelector('[data-field="patient_id"]').innerText,
+        doctor_id: row.querySelector('[data-field="doctor_id"]').innerText,
+        appointment_date: row.querySelector('[data-field="appointment_date"]').innerText,
+        status: row.querySelector('[data-field="status"]').innerText
+      };
+      await fetch(`/appointments/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      loadAppointments();
+    }
+
+    // Delete appointment
+    async function deleteAppointment(id){
+      if(!confirm('Delete appointment?')) return;
+      await fetch(`/appointments/${id}`,{method:'DELETE'});
+      loadAppointments();
+    }
+
+    // Add appointment
+    document.getElementById('add-appointment-form').addEventListener('submit',async e=>{
+      e.preventDefault();
+      const body={
+        patient_id: patient_id.value,
+        doctor_id: doctor_id.value,
+        appointment_date: appointment_date.value,
+        status: status.value
+      };
+      await fetch('/appointments/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      loadAppointments(); e.target.reset();
+    });
+
+    window.onload=loadAppointments;
+  </script>
+</body>
+</html>

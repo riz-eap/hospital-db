@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MediCore HMS - Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Roboto',sans-serif;background:#121212;color:#fff;display:flex;height:100vh;overflow:hidden;}
+
+    /* Sidebar */
+    .sidebar{width:250px;background:#1f1f30;padding:20px;display:flex;flex-direction:column;}
+    .sidebar h2{color:#fff;margin-bottom:25px;text-align:center;}
+    .sidebar a{display:block;color:#ccc;padding:12px 15px;margin-bottom:8px;text-decoration:none;border-radius:6px;transition:0.3s;}
+    .sidebar a.active,.sidebar a:hover{background:#2e2e50;color:#fff;}
+    .sidebar button{margin-top:auto;padding:12px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;transition:0.3s;}
+    .sidebar button:hover{background:#c0392b;}
+
+    /* Main content */
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+    
+    /* Topbar */
+    .topbar{background:#1f1f30;padding:15px 25px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333;box-shadow:0 2px 5px rgba(0,0,0,0.5);}
+    .topbar h1{font-size:22px;color:#fff;}
+    .user-info{font-size:14px;color:#bbb;}
+    .user-info strong{color:#fff;}
+
+    /* Content */
+    .content{flex:1;padding:25px;overflow-y:auto;}
+    .content h2{margin-bottom:20px;color:#fff;}
+
+    /* Stats Cards */
+    .stats{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:25px;}
+    .stat-card{background:#2a2a40;padding:25px 20px;border-radius:12px;flex:1;min-width:150px;text-align:center;transition:0.3s;cursor:pointer;position:relative;}
+    .stat-card:hover{background:#3b3b5c;}
+    .stat-card span{display:block;font-size:28px;margin-top:10px;font-weight:500;color:#1abc9c;}
+    .stat-card .icon{position:absolute;top:10px;right:15px;font-size:20px;color:#ccc;}
+
+    /* Upcoming Appointments Table */
+    .section{margin-top:30px;}
+    .section h3{margin-bottom:15px;color:#fff;}
+    .table{width:100%;border-collapse:collapse;background:#1f1f30;border-radius:8px;overflow:hidden;}
+    .table th,.table td{padding:12px 15px;text-align:left;}
+    .table th{background:#2a2a40;color:#fff;font-weight:500;}
+    .table tr:nth-child(even){background:#23233f;}
+    .table tr:hover{background:#2e2e50;}
+
+    /* Quick actions */
+    .quick-actions{display:flex;gap:15px;flex-wrap:wrap;margin-top:25px;}
+    .quick-btn{flex:1;min-width:120px;padding:15px;background:#1abc9c;color:#121212;text-align:center;border-radius:8px;font-weight:500;cursor:pointer;transition:0.3s;}
+    .quick-btn:hover{background:#16a085;}
+
+    /* Loader for tables */
+    .loader{text-align:center;padding:20px;color:#bbb;}
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>MediCore HMS</h2>
+    <a href="/index.html" class="active">Dashboard</a>
+    <a href="/patients.html">Patients</a>
+    <a href="/staff.html">Staff</a>
+    <a href="/appointments.html">Appointments</a>
+    <a href="/medicines.html">Medicines</a>
+    <a href="/settings.html">Settings</a>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+    <div class="topbar">
+      <h1>Dashboard</h1>
+      <div class="user-info" id="user-info">Signed in as <strong>Loading...</strong></div>
+    </div>
+
+    <div class="content">
+      <h2>Overview</h2>
+      <div class="stats">
+        <div class="stat-card" onclick="goToPage('patients.html')">
+          <div class="icon">🧑‍🤝‍🧑</div>
+          Patients<br><span id="total-patients">0</span>
+        </div>
+        <div class="stat-card" onclick="goToPage('staff.html')">
+          <div class="icon">👨‍⚕️</div>
+          Doctors<br><span id="total-doctors">0</span>
+        </div>
+        <div class="stat-card" onclick="goToPage('appointments.html')">
+          <div class="icon">📅</div>
+          Appointments Today<br><span id="today-appointments">0</span>
+        </div>
+        <div class="stat-card" onclick="goToPage('patients.html')">
+          <div class="icon">🛏️</div>
+          Available Beds<br><span id="available-beds">0</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Upcoming Appointments</h3>
+        <table class="table" id="upcoming-appointments">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Doctor</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4" class="loader">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h3>Quick Actions</h3>
+        <div class="quick-actions">
+          <div class="quick-btn" onclick="goToPage('patients.html')">Add Patient</div>
+          <div class="quick-btn" onclick="goToPage('appointments.html')">New Appointment</div>
+          <div class="quick-btn" onclick="goToPage('medicines.html')">Manage Medicines</div>
+          <div class="quick-btn" onclick="goToPage('staff.html')">Add Staff</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // User session check
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) window.location.href = '/login.html';
+    else document.getElementById('user-info').innerHTML = `Signed in as <strong>${user.username}</strong> (${user.role})`;
+
+    function logout() {
+      fetch('/logout', { method:'POST' }).finally(() => {
+        localStorage.removeItem('user');
+        window.location.href = '/login.html';
+      });
+    }
+
+    function goToPage(url){ window.location.href = url; }
+
+    // Load dashboard data from backend
+    async function loadDashboardStats(){
+      try {
+        const [p,d,a,r,appointments] = await Promise.all([
+          fetch('/api/stats/patients').then(res=>res.json()),
+          fetch('/api/stats/doctors').then(res=>res.json()),
+          fetch('/api/stats/appointments').then(res=>res.json()),
+          fetch('/api/rooms/available').then(res=>res.json()),
+          fetch('/api/appointments/upcoming').then(res=>res.json())
+        ]);
+
+        document.getElementById('total-patients').innerText = p.total ?? 0;
+        document.getElementById('total-doctors').innerText = d.total ?? 0;
+        document.getElementById('today-appointments').innerText = a.today ?? 0;
+        document.getElementById('available-beds').innerText = r.available ?? 0;
+
+        const tbody = document.querySelector('#upcoming-appointments tbody');
+        tbody.innerHTML = '';
+        if (appointments.length > 0){
+          appointments.forEach(app => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${app.patient}</td><td>${app.doctor}</td><td>${app.date}</td><td>${app.status}</td>`;
+            tbody.appendChild(tr);
+          });
+        } else {
+          tbody.innerHTML = `<tr><td colspan="4" class="loader">No upcoming appointments</td></tr>`;
+        }
+      } catch(err){
+        console.error('Error loading dashboard stats:', err);
+        const tbody = document.querySelector('#upcoming-appointments tbody');
+        tbody.innerHTML = `<tr><td colspan="4" class="loader">Failed to load data</td></tr>`;
+      }
+    }
+
+    window.onload = loadDashboardStats;
+  </script>
+</body>
+</html>

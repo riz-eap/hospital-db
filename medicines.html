@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MediCore HMS - Medicines</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Roboto',sans-serif;background:#121212;color:#fff;display:flex;height:100vh;overflow:hidden;}
+    
+    /* Sidebar */
+    .sidebar{width:250px;background:#1f1f30;padding:20px;display:flex;flex-direction:column;}
+    .sidebar h2{color:#fff;text-align:center;margin-bottom:25px;}
+    .sidebar a{display:block;color:#ccc;padding:12px 15px;margin-bottom:8px;text-decoration:none;border-radius:6px;transition:0.3s;}
+    .sidebar a.active,.sidebar a:hover{background:#2e2e50;color:#fff;}
+    .sidebar button{margin-top:auto;padding:12px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;transition:0.3s;}
+    .sidebar button:hover{background:#c0392b;}
+
+    /* Main content */
+    .main{flex:1;padding:25px;overflow-y:auto;}
+    .main h2{margin-bottom:20px;color:#fff;}
+
+    /* Form */
+    form{margin-bottom:20px;background:#1e1e2f;padding:20px;border-radius:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+    form input, form select, form button{padding:10px;border:none;border-radius:6px;font-size:14px;}
+    form input, form select{flex:1;}
+    form button{background:#1abc9c;color:#121212;cursor:pointer;transition:0.3s;font-weight:500;}
+    form button:hover{background:#16a085;}
+
+    /* Table */
+    table{width:100%;border-collapse:collapse;margin-top:20px;border-radius:10px;overflow:hidden;background:#1f1f30;}
+    th, td{padding:12px 15px;text-align:center;border-bottom:1px solid #333;}
+    th{background:#2a2a40;color:#fff;font-weight:500;}
+    tr:nth-child(even){background:#23233f;}
+    tr:hover{background:#2e2e50;}
+    td[contenteditable="true"]{background:#2a2a40;cursor:text;}
+    button.action-btn{padding:6px 10px;border:none;border-radius:6px;margin:0 2px;cursor:pointer;transition:0.3s;}
+    button.save-btn{background:#1abc9c;color:#121212;}
+    button.save-btn:hover{background:#16a085;}
+    button.delete-btn{background:#e74c3c;color:#fff;}
+    button.delete-btn:hover{background:#c0392b;}
+
+    /* Stock alert */
+    .low-stock{color:#e74c3c;font-weight:700;}
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>MediCore HMS</h2>
+    <a href="/index.html">Dashboard</a>
+    <a href="/patients.html">Patients</a>
+    <a href="/staff.html">Staff</a>
+    <a href="/appointments.html">Appointments</a>
+    <a href="/medicines.html" class="active">Medicines</a>
+    <a href="/settings.html">Settings</a>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <h2>Medicines</h2>
+    <form id="add-medicine-form">
+      <input type="text" id="name" placeholder="Medicine Name" required>
+      <input type="number" id="stock" placeholder="Stock" required>
+      <input type="text" id="dosage" placeholder="Dosage">
+      <input type="date" id="last_restocked">
+      <button type="submit">Add Medicine</button>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Stock</th>
+          <th>Dosage</th>
+          <th>Last Restocked</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="medicines-tbody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    // User session
+    const user = JSON.parse(localStorage.getItem('user'));
+    if(!user) window.location.href='/login.html';
+    
+    function logout(){
+      fetch('/logout',{method:'POST'}).finally(()=>{
+        localStorage.removeItem('user');
+        window.location.href='/login.html';
+      });
+    }
+
+    // Load medicines from backend
+    async function loadMedicines(){
+      try{
+        const data=await fetch('/medicines').then(r=>r.json());
+        const tbody=document.getElementById('medicines-tbody'); tbody.innerHTML='';
+        data.forEach(m=>{
+          tbody.innerHTML+=`
+            <tr>
+              <td>${m.id}</td>
+              <td contenteditable="true" data-field="name">${m.name}</td>
+              <td contenteditable="true" data-field="stock" class="${m.stock<10?'low-stock':''}">${m.stock}</td>
+              <td contenteditable="true" data-field="dosage">${m.dosage||''}</td>
+              <td contenteditable="true" data-field="last_restocked">${m.last_restocked||''}</td>
+              <td>
+                <button class="action-btn save-btn" onclick="updateMedicine(${m.id}, this)">Save</button>
+                <button class="action-btn delete-btn" onclick="deleteMedicine(${m.id})">Delete</button>
+              </td>
+            </tr>`;
+        });
+      } catch(err){
+        console.error('Error loading medicines', err);
+      }
+    }
+
+    // Update medicine
+    async function updateMedicine(id,btn){
+      const row=btn.closest('tr');
+      const body={
+        name: row.querySelector('[data-field="name"]').innerText,
+        stock: row.querySelector('[data-field="stock"]').innerText,
+        dosage: row.querySelector('[data-field="dosage"]').innerText,
+        last_restocked: row.querySelector('[data-field="last_restocked"]').innerText
+      };
+      await fetch(`/medicines/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      loadMedicines();
+    }
+
+    // Delete medicine
+    async function deleteMedicine(id){
+      if(!confirm('Delete medicine?')) return;
+      await fetch(`/medicines/${id}`,{method:'DELETE'});
+      loadMedicines();
+    }
+
+    // Add medicine
+    document.getElementById('add-medicine-form').addEventListener('submit',async e=>{
+      e.preventDefault();
+      const body={name:name.value, stock:stock.value, dosage:dosage.value, last_restocked:last_restocked.value};
+      await fetch('/medicines/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      loadMedicines();
+      e.target.reset();
+    });
+
+    window.onload=loadMedicines;
+  </script>
+</body>
+</html>
